@@ -2,11 +2,11 @@ package poormanshttpserver.server;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import poormanshttpserver.client.ClientRequestHandler;
 
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.concurrent.TimeUnit;
 
 public class Server {
     ServerSocket serverSocket;
@@ -28,7 +28,7 @@ public class Server {
                 try {
                     handler.run();
                 } catch (IOException e) {
-                    throw new RuntimeException(e);
+                    logger.error("Trouble sending response");
                 }
             });
             thread.start();
@@ -42,7 +42,7 @@ public class Server {
                 this.serverSocket.close();
                 logger.debug("Server socket closed");
             } catch (IOException e) {
-                throw new RuntimeException(e);
+                logger.error("Trouble shutting down server");
             }
         }));
     }

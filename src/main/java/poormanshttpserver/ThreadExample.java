@@ -1,4 +1,4 @@
-package poormanshttpserver.server;
+package poormanshttpserver;
 
 import java.util.Random;
 
