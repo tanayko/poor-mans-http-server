@@ -11,7 +11,7 @@ import java.util.Objects;
 public class StreamTest {
     @Test
     public void test() throws IOException {
-        // note test case deals with SlowStream type directly so it can configure it
+        // note test case deals with SlowStream type directly, so it can configure it
         final SlowStream stream = new SlowStream("my string content".getBytes(StandardCharsets.UTF_8));
         stream.delay = 100L;
 
