@@ -26,20 +26,29 @@ public class HttpClientRequestParser {
     public ClientRequest run() throws IOException {
         StringBuilder stringBuffer = new StringBuilder();
 
+        // continuously read input until headers are completely read
         while (!headersDone) {
             this.in.read(this.buffer);
             stringBuffer.append(new String(this.buffer));
+
+            // process input to update buffer and check what has been inputted
             stringBuffer = this.processCurrentBuffer(stringBuffer);
         }
 
+        // parse request line and headers
         this.parseRequestLine(this.requestLine);
         this.parseHeaders(this.headers);
 
+        // check if there is an entity body and handle it if there is
         if (this.clientRequest.headers.get("Content-Type") != null) {
+            // create new buffer
             int bufferLength = Integer.parseInt(this.clientRequest.headers.get("Content-Length"));
             byte[] entityBuffer = new byte[bufferLength];
+
+            // get unused data from old buffer
             byte[] currentDataInBuffer = stringBuffer.toString().getBytes(StandardCharsets.US_ASCII);
 
+            // check how much data was in old buffer
             int index = 0;
             for (int i = 0; i < currentDataInBuffer.length; i++) {
                 if (currentDataInBuffer[i] == 0) {
@@ -48,8 +57,10 @@ public class HttpClientRequestParser {
                 }
             }
 
+            // add old data to new buffer
             System.arraycopy(currentDataInBuffer, 0, entityBuffer, 0, index);
 
+            // continuously read input until new buffer is full
             while (entityBuffer[bufferLength-1] == 0) {
                 this.in.read(entityBuffer);
             }
@@ -57,38 +68,16 @@ public class HttpClientRequestParser {
             this.clientRequest.entity = entityBuffer;
         }
 
-//        InputStreamReader reader = new InputStreamReader(this.in);
-//        String stringBuffer;
-//        while (this.read(this.buffer) != -1) {
-//            if (!inputLine.equals("")) {
-//                stringBuffer.append(inputLine).append("\r\n");
-//            } else {
-//                this.processCurrentBuffer(stringBuffer);
-//            }
-//        }
-
-
-//        this.buffer = new byte[1024];
-//
-//        while(this.in.read(this.buffer) != -1) {
-//            this.processCurrentBuffer();
-//        };
-
         return this.clientRequest;
     }
 
-    private void parseHeaders(List<String> headers) {
-        for (String header : headers) {
-            String[] splitUpHeader = header.split(":");
-            this.clientRequest.headers.put(splitUpHeader[0].trim(), splitUpHeader[1].trim());
-        }
-    }
-
     private StringBuilder processCurrentBuffer(StringBuilder buffer) throws IOException {
+        // if request line is finished being inputted, get the request line and update buffer
         if (!this.requestLineDone && !(buffer.length() == 0)) {
             buffer = this.fillRequestLine(buffer);
         }
 
+        // if headers are finished being inputted, get the headers and update buffer
         if (this.requestLineDone && !this.headersDone && !(buffer.length() == 0)) {
             buffer = this.fillHeaders(buffer);
         }
@@ -96,13 +85,7 @@ public class HttpClientRequestParser {
         return buffer;
     }
 
-    private void fillEntityMessage() {
-        this.entityMessageBody += this.buffer;
-        if (this.buffer.equals("")) {
-            this.entityDone = true;
-        }
-    }
-
+    // parse request line
     private void parseRequestLine(String requestLine) {
         String[] parts = requestLine.split("\\s+");
         if (parts.length == 3) {
@@ -112,10 +95,19 @@ public class HttpClientRequestParser {
         }
     }
 
+    // parse the headers
+    private void parseHeaders(List<String> headers) {
+        for (String header : headers) {
+            String[] splitUpHeader = header.split(":");
+            this.clientRequest.headers.put(splitUpHeader[0].trim(), splitUpHeader[1].trim());
+        }
+    }
+
     private StringBuilder fillRequestLine(StringBuilder buffer) throws IOException {
         String[] bufferCurrent = buffer.toString().split("\r\n");
 
         if (bufferCurrent.length > 1) {
+            // update buffer
             buffer = new StringBuilder(buffer.substring(bufferCurrent[0].length() + 2));
             this.requestLineDone = true;
             this.requestLine = bufferCurrent[0];
@@ -127,6 +119,8 @@ public class HttpClientRequestParser {
     private StringBuilder fillHeaders(StringBuilder buffer) {
         String[] bufferCurrent = buffer.toString().split("\r\n");
 
+        // if two CRLFs found, get all remaining headers and update buffer to after CRLFs
+        // if not, get all complete headers and update buffer to incomplete header
         if (buffer.toString().contains("\r\n\r\n")) {
             this.headersDone = true;
             this.headers.addAll(Arrays.asList(bufferCurrent).subList(0, bufferCurrent.length - 2));
